@@ -1,0 +1,137 @@
+import numpy as np
+from random import shuffle
+
+def softmax_loss_naive(W, X, y, reg):
+  """
+  Softmax loss function, naive implementation (with loops)
+
+  Inputs have dimension D, there are C classes, and we operate on minibatches
+  of N examples.
+
+  Inputs:
+  - W: A numpy array of shape (D, C) containing weights.
+  - X: A numpy array of shape (N, D) containing a minibatch of data.
+  - y: A numpy array of shape (N,) containing training labels; y[i] = c means
+    that X[i] has label c, where 0 <= c < C.
+  - reg: (float) regularization strength
+
+  Returns a tuple of:
+  - loss as single float
+  - gradient with respect to weights W; an array of same shape as W
+  """
+  # Initialize the loss and gradient to zero.
+  loss = 0.0
+  dW = np.zeros_like(W)
+
+  #############################################################################
+  # TODO: Compute the softmax loss and its gradient using explicit loops.     #
+  # Store the loss in loss and the gradient in dW. If you are not careful     #
+  # here, it is easy to run into numeric instability. Don't forget the        #
+  # regularization!                                                           #
+  #############################################################################
+  N, D = X.shape
+  outputSize = W.shape[1]
+  scores = np.zeros((N,outputSize))
+  for i in range(N):
+    for j in range(outputSize):
+      tmpVal = 0.0
+      for k, val in enumerate(X[i,:]):
+        tmpVal += val*W[k,j]
+      scores[i,j] = np.exp(tmpVal)
+
+  sumPossi = np.zeros((N,1))
+  for i in range(N):
+    tmpVal = 0.0
+    for j in range(outputSize):
+      tmpVal += scores[i,j]
+    sumPossi[i] = tmpVal
+
+  possTmp = scores
+  for i in range(N):
+    for j in range(outputSize):
+      possTmp[i,j] /= sumPossi[i]
+
+  regularLoss = 0.0
+  for i in range(D):
+    for j in range(outputSize):
+      regularLoss += W[i,j]**2
+  
+  loss = 0.0
+  for i in range(N):
+    loss += -np.log(possTmp[i,y[i]])
+  loss =loss/N  + reg * regularLoss
+
+ 
+  delta_y = possTmp
+  for i in range(N):
+	for j in range(outputSize):
+            if(j == y[i]):
+                delta_y[i,j] -= 1
+  
+  dW = np.zeros((D,outputSize))
+  for i in range(D):
+    for j in range(outputSize):
+      tmpVal = 0.0
+      for k, val in enumerate(X[:,i]):
+        tmpVal += val*delta_y[k,j]
+      dW[i,j] = tmpVal/N + + reg * W[i,j] * 2
+  
+  #############################################################################
+  #                          END OF YOUR CODE                                 #
+  #############################################################################
+
+  return loss, dW
+
+
+def softmax_loss_vectorized(W, X, y, reg):
+  """
+  Softmax loss function, vectorized version.
+
+  Inputs and outputs are the same as softmax_loss_naive.
+  """
+  # Initialize the loss and gradient to zero.
+  loss = 0.0
+  dW = np.zeros_like(W)
+
+  #############################################################################
+  # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
+  # Store the loss in loss and the gradient in dW. If you are not careful     #
+  # here, it is easy to run into numeric instability. Don't forget the        #
+  # regularization!                                                           #
+  #############################################################################
+  N, D = X.shape
+  scores = np.dot(X,W)
+  expTmp = np.exp(scores)
+  possTmp = expTmp/(np.sum(expTmp,1).reshape(N,1))
+  regularLoss = sum(sum(W**2))
+
+  labelArray = np.zeros_like(possTmp)#label where the possibity should be zero
+  tmpList = np.array(range(N))
+  labelArray[tmpList,y] = 1
+
+
+  loss = sum(sum(-np.log(possTmp) * labelArray))/N + reg * regularLoss
+
+  delta_y = possTmp
+  delta_y -= labelArray
+  
+  dW = np.dot(np.transpose(X),delta_y)/N + reg * W * 2
+  #############################################################################
+  #                          END OF YOUR CODE                                 #
+  #############################################################################
+
+  return loss, dW
+
+def train(X,y,X_dev,y_dev,W,reg):
+  pass
+def getAcc(X,y,W):
+  N, D = X.shape
+  scores = np.dot(X,W)
+  expTmp = np.exp(scores)
+  possTmp = expTmp/(np.sum(expTmp,1).reshape(N,1))
+  
+  maxPoss = np.max(possTmp,1).reshape(N,1)
+  y_pred = (np.where(possTmp == maxPoss))[1]
+
+  Acc = (y_pred == y).mean()
+  return Acc
